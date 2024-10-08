@@ -9,22 +9,26 @@ from torchvision.datasets import ImageFolder
 from torchvision import transforms
 from tqdm import tqdm
 
-# Load the model
+
+# 모델 로드
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load('ViT-B/32', device)
 
-# Define the directory containing your custom dataset
-data_dir = r""  # 사용자 데이터셋 경로 지정
 
-# Define the dataset transformations (must match CLIP model's expected input size and normalization)
+# 사용자 데이터셋 경로 지정
+data_dir = r""  
+
+
+# 데이터셋 변환 정의 (CLIP 모델의 예상 입력 크기 및 정규화에 맞춰야 함)
 preprocess = transforms.Compose([
-    transforms.Resize((224, 224)),  # Resize images to 224x224 (CLIP ViT-B/32 input size)
-    transforms.ToTensor(),  # Convert image to Tensor
+    transforms.Resize((224, 224)),  # 이미지를 224x224로 크기 조정 (CLIP ViT-B/32 입력 크기)
+    transforms.ToTensor(),  # 이미지를 Tensor로 변환
     transforms.Normalize((0.48145466, 0.4578275, 0.40821073), 
-                        (0.26862954, 0.26130258, 0.27577711))  # Normalize (CLIP's expected normalization)
+                         (0.26862954, 0.26130258, 0.27577711))  # 정규화 (CLIP의 예상 정규화)
 ])
 
-# Load the custom dataset using ImageFolder
+
+# ImageFolder를 사용하여 사용자 데이터셋 로드
 train = ImageFolder(os.path.join(data_dir, 'train'), transform=preprocess)
 test = ImageFolder(os.path.join(data_dir, 'test'), transform=preprocess)
 
@@ -41,24 +45,25 @@ def get_features(dataset):
 
     return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
 
-# Calculate the image features
+
+# 이미지 특징 계산
 train_features, train_labels = get_features(train)
 test_features, test_labels = get_features(test)
 
-# Perform logistic regression
+
+# 로지스틱 회귀 수행
 classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
 classifier.fit(train_features, train_labels)
 
-# Save the trained model using joblib
-joblib.dump(classifier, 'logistic_regression_model.pkl')  # 모델을 pkl 파일로 저장
 
-print("모델이 성공적으로 저장되었습니다.")
+# 훈련된 모델을 joblib을 사용하여 저장
+joblib.dump(classifier, 'model.pkl')  # 모델을 pkl 파일로 저장
 
-# Optional: 나중에 저장된 모델을 불러오는 코드
-# classifier = joblib.load('logistic_regression_model.pkl')
-# print("저장된 모델을 성공적으로 불러왔습니다.")
 
-# Evaluate using the logistic regression classifier
+print("모델 저장 완료!")
+
+
+# 로지스틱 회귀 분류기를 사용하여 평가
 predictions = classifier.predict(test_features)
 accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
-print(f"Accuracy = {accuracy:.3f}")
+print(f"정확도 = {accuracy:.3f}")
